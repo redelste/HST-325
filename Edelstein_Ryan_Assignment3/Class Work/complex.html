@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Digital NYC template</title>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=10" />
+<link rel="stylesheet" type="text/css" href="style.css"></link>
+<script src="https://2019.vizsociety.net/shared/d3/d3.v3.min.js"></script>
+<script src="https://2019.vizsociety.net/shared/d3/topojson.v1.min.js"></script>
+<script src="https://2019.vizsociety.net/shared/d3/d3.geo.projection.v0.min.js"></script>
+<script src="https://2019.vizsociety.net/shared/js/jquery-1.10.2.js"></script>
+<script src="https://2019.vizsociety.net/shared/js/shared.js"></script>
+<script src="https://2019.vizsociety.net/d3viz/lib/all.php"></script>
+
+<script type="text/javascript">
+/* Flexible D3.js global data viewer — by Alex Wellerstein, 2015-2019, v2.1 */
+
+/* MAP OPTIONS */
+
+//creates a new D3 JSON map object
+var map = new d3SVGMap({
+	div: "#map", //id of div to put the map in
+	width: 960, //width of the map 
+	height: window.innerHeight, //height of the map 
+	mapfile: "nyc_zipcodes.json", //JSON map file
+	projection_name: "mercator", //map projection 
+	projection_rotate: [73.94,-40.7,0], //centers the map 
+	projection_scale: 90000, //zooms the map
+	projection_translate: [960/2,window.innerHeight/2], //centers the map
+	onload: function() { //function that runs when the map is loaded
+		//this designates what the "tooltip" is going to be
+		map.tooltip = d3.select("#texts")
+					.append("div")
+					.attr("id","tooltip")
+					.text("");
+	},
+	setid: function(d) {
+		//for the zip code map only -- assign the ids to the postalcode
+		if(typeof d.properties.postalCode != "undefined") {
+			return "id_"+d.properties.postalCode;
+		} else {
+			return d.id;
+		}
+	},
+});
+
+
+/* DATA SPECIFIC OPTIONS -- you need to tailor these to your dataset */
+
+// NOTE! Anytime you see something like d["something here"], this means
+// that you are referencing a column in the CSV file. The script is smart
+// enough so that it knows that if you put d["something here"] you mean,
+// "access the data in the column whose header (first entry) is 'something here'."
+// So to adapt this to another dataset, you must know the column heads, and find
+// the places in the template below to change it to your own column headings.
+
+//Here is where you should put the data files, in csv format.
+//You can use more than one, as an array, just give it a different number (arrays count from 0, 1, 2, etc.)
+
+//the data file constructor — used for lots of things. You can have more than one, just copy and paste and update the index.
+var museumData = new d3Data({
+	csv: "NYCGO_museums_20and_20galleries_001.csv", //path to the csv file
+	latLon: function(d) { //the latLon function tells the map how to parse any latLon data in the file. you don't HAVE to do this here, but it makes it easily accessible to other visualizations. 
+		return [ parseFloat(d["lat"]), parseFloat(d["lon"]) ] //return an array of [lat,lon] -- so indicate which fields those are
+	}
+})
+
+//another example, for the choropleth map. This is a file with zipcode and population data in it. 
+var zipCodes = new d3Data({
+	csv: "nyc_zipcode_population.csv", //path to the csv file
+})
+
+
+/* END DATA-SPECIFIC OPTIONS */
+
+/* START VISUALIZATION OPTIONS */
+
+
+// Add some very simple captions
+// Visualizations will be "stacked", from the "bottom" up, as we add them. 
+// So if we want captions to be UNDER the data, we need to put them first.
+var captions = new textCaptions({
+
+	map: map, //which map object they go on
+	
+	angle: 0, //rotation angle (degrees) for all captions -- optional
+
+	class: "captions", //class name for captions (for styling)
+	
+	//list of captions to add, and the lat/lon points to put them near	
+	captions: [
+		{caption: "Manhattan",lat:40.79,lon:-74.07},
+		{caption: "Brooklyn",lat:40.65,lon:-73.98},
+		{caption: "The Bronx",lat:40.85,lon:-73.91},
+		{caption: "Queens",lat:40.72,lon:-73.87},
+		{caption: "Staten Island",lat:40.58,lon:-74.18},	
+	],
+
+})
+
+
+// Creates a circle visualization. The circles need latitude and longitude positions (which you can define in the datasource, above),
+// but they also will need a radius (which can be data-driven or just set by you). You can also make the color correspond to data.
+// The example below shows both, as well as how to have it automatically make a radius-size menu. If you don't want a menu,
+// just set radius: 10 or something.
+// Circles work best for data that is located in a specific lat/lon position.
+
+var circles = new dataCircles({
+	map: map, //the D3 map object (already defined above)
+
+	data: museumData, //the D3 data object (already defined above)
+
+	//the class name applied to each item of data
+	data_class: "circledata",
+
+	//sets up a drop-down selector for dynamically changing the radius of the circle
+	//the first item is the caption, the second is a function that returns the value (in pixels) for the radius
+	//note that only one of these (the first) in the example is driven from the data. the others are just raw numbers.
+	radius_selector_options: [
+		["Adult price", function(d) { 
+			if(+d["adult_price"]>0) {
+				return +d["adult_price"];
+			} else {
+				return 1; //returning zero makes things totally invisible, so I set a lower bound
+			}
+		}],
+		["Fixed: 1", function(d) { return 1; }],
+		["Fixed: 2", function(d) { return 2; }],
+		["Fixed: 5", function(d) { return 5; }],
+		["Fixed: 10", function(d) { return 10; }]
+	],
+
+	//the default option (0 = first)
+	radius_selector_default: 0,
+
+	//the caption for the selector
+	radius_selector_caption: "Set radius: ",
+
+	//the field whose value changes the color of the circle
+	color_field: "adult_price",
+		
+	//a function that turns the data into a color, in this case, a d3 color function
+	//the function below uses a linear scale that assigns a color between "green" and "red" as the data varies between 0 ("green") and 24 ("red")
+	color_scale: d3.scale.linear().domain([0,24]).range(["green", "red"]), 
+
+	//function that determines the caption that is displayed when the mouse hovers over a datapoint
+	mouseover_caption: 		
+		function(d) {
+			return "<b><big>"+d["name"] + "</big></b><br>"
+					+d["address"]+"<br>"
+					+d["closing"]+"<br>"
+					+ "Rates: "+d["rates"]+"<br>"
+					+ "Specials: "+d["specials"]+"<br>"
+				;
+			},
+})
+
+/*	This creates a new choropleth visualization. Choropleths are maps where the data is shown by shading a geographical unit on the map, 
+	e.g., a state, zip code, region, etc. These regions are defined in the GeoJSON file. The code below is used to tell D3 which regions
+	in the GeoJSON file correspond to which parts of the data file, and then determine the behavior (e.g., what color to make them).
+
+	In the sample GeoJSON file (nyc_zipcodes.json), the shape objects don't have useful data by default, so when we declare the map above,
+	we have a function run that makes the id predictable (in this example, "id_"+ the zipcode). For a new map, you may have to examine the
+	raw GeoJSON code to see how it is set up (they all differ a bit).
+
+	In the sample data file (nyc_zips.csv), there is also a field that corresponds to the zipcode, and then other data we can use
+	for setting the color coding.
+
+	Below, we set id_field to a function that will tell, for exact row of the data file, what shape id in the GeoJSON file it corresponds to.
+	Once that is set, it's as before to set color fields, mouseover captions, etc.
+		
+*/
+  
+
+var choropleth = new SVGChoropleth({
+
+	data: zipCodes, //dataset used to associate ids and data
+
+	id_field: function(d) { return "id_"+d["ZIPCODE"] }, //function that returns the field in the dataset that corresponds to the path ids on the map
+	
+	//function that returns the value in the dataset that determines what color each part of the map should be colored
+	color_field: function(d) { 
+		return d["POPULATION"]/(d["AREA_MI"]) //AREA is in square feet, so convert to square miles, then make population density
+	}, 
+	color_scale: d3.scale.linear() //the function that determines what colors to assign to the map based on value
+    				.domain([0,50000,100000]) //points to peg a color to
+    				.range(["white", "steelblue","navy"]) //colors that are pegged to each point
+    , 
+    
+    color_target: "fill", //the entity to color
+
+	mouseover_caption: 		//function that determines the caption that is displayed when the mouse hovers over a colored part of the map
+		function(d,feature,obj) { //d = the associated piece of data (from the data set) associated with the shape feature; feature = the shape feature's own data; obj = the d3 object of the shape feature
+					console.log(d);
+				return "<b>Zip Code:</b> "+d["ZIPCODE"]+"<br>"
+						+"Population: "+addCommas(parseInt(d["POPULATION"]))+"<br>"
+						+"Area: "+Math.round(d["AREA_MI"])+" mi&sup2;<br>"
+						+"Pop. density: "+addCommas(Math.round(d["POPULATION"]/(d["AREA_MI"])))+" people per square mile" ;
+	},
+	
+	caption_id: "tooltip", //necessary for mouseover captions, etc.
+	
+})
+
+
+//this makes it so that if you click on any circle or path, it'll zoom in or out. 
+var zoomer = new mouseZoomer({
+	map: map,
+	zoom_if_clicked: ["circle","path"],
+	zoom_to_centroid: false,
+	zoom_transition_speed: 700,
+})
+
+
+//this creates a little drop-down menu that will allow you to quickly highlight a specific datapoint
+var dataSelect = new dataLocator({
+
+	viz: circles, //the D3 visualization object it will act upon
+
+	//anything you add here will be added BEFORE any other data is added to the selector
+	selector_options: [
+		["Locate a museum by name...",false], //false means it will clear all classes applied
+	],
+
+	//the field it will sort the data by for the caption -- leave blank to not sort. in this case, it is already sorted
+	selector_sort_field: "",
+
+	//how it calculates the caption
+	selector_captions: function(d) {
+		return d["name"];
+	},
+	
+	selector_id: "options", //id of the HTML object you want to create the selector inside of
+
+	selected_class: "selected", //class that is applied to anything selected
+	
+	selected_function: function(viz,d) { //a function that is triggered when something is selected
+		viz.dataMouseOver(d); //in this case, tell it to act like the mouse was put over the data viz object
+	},
+
+})
+
+//just an example of how you can change these around or add more than one
+var dataSelect2 = new dataLocator({
+
+	viz: circles, //the D3 visualization object it will act upon
+
+	//anything you add here will be added BEFORE any other data is added to the selector
+	selector_options: [
+		["Or locate a museum by price...",false], //false means it will clear all classes applied
+	],
+
+	//the field it will sort the data by for the caption -- leave blank to not sort. in this case, it is already sorted
+	selector_sort_field: "adult_price",
+
+	sort_alpha: false, //sorts it as a number
+
+	//how it calculates the caption
+	selector_captions: function(d) {
+		return "$"+d["adult_price"] + " - "+ d["name"];
+	},
+	
+	selector_id: "options", //id of the HTML object you want to create the selector inside of
+
+	selected_class: "selected", //class that is applied to anything selected
+	
+	selected_function: function(viz,d) { //a function that is triggered when something is selected
+		viz.dataMouseOver(d); //in this case, tell it to act like the mouse was put over the data viz object
+	},
+
+})
+
+
+/* Three examples of FILTERS are shown below. Filters parse the data based on different criteria.
+ If the filter returns "true" (finds the thing it is looking for) then it applies the "found" class to objects of whatever class you tell it to.
+ If the filter returns "false" (does not find what it is looking for), then it applies the "lacks" class to the same.
+ By specifying the behavior of these classes in the CSS, you determine whether the filter hides or shows data.
+*/
+
+//the text filter searches a field for a given piece of text
+var text_filter = new dataFilter({
+
+	filter_type: FILTERTYPE_TEXTSEARCH,
+
+	//these options tell how the toggle menu should appear in the code
+	selector_caption: "Show museums open on: (text filter) ",
+	//array of arrays for the selector. first item is a caption, second is either a value to search for, OR a function.
+	//the function will pass two variables. the first (t, below) is the formatted text to search for. the second (d, below) is the full data item.
+	//if the function returns true, it is marked as "found." if "false" then as "lacks."
+	selector_options: [
+		["All dates", false], //returning 'false removes all filtering
+		["Sunday", "sunday"],
+		["Monday", "monday"],
+		["Tuesday", "tuesday"],
+		["Wednesday", "wednesday"],
+		["Thursday", "thursday"],
+		["Friday", "friday"],
+		["Saturday", "saturday"],
+		["Thanksgiving or Christmas", 
+			function(t,d) { 
+				//this is a silly example of a custom function. indexOf is a standard Javascript function for searching for text within a string.
+				if(t.indexOf("thanksgiving")>-1 || t.indexOf("christmas")>-1) {
+					return true;
+				} else {
+					return false;
+				}
+			}
+		]
+	],
+	selector_selected: 0, //default option on list
+	selector_id: "options", //id of the HTML object you want to create the keyword filter select inside of
+
+	filter_field: "closing",  //the field name in the CSV file that we search for the text in
+	
+	filter_target: ".circledata", //the svg selector of your data to have this filtering act on
+	
+	case_insensitive: true, //will convert all text to *lowercase* before comparing
+
+	found_class: "data_hidden", //the class that is applied to the svg class if the text is found (in this case, we HIDE what we find)
+	lacks_class: "", //the class that is applied if it is not found (if blank, nothing is applied)
+
+})
+
+//keyword filters search a given field for a TEXT keyword, by parsing the text into chunks based on a delimiter. 
+var keywords_filter = new dataFilter({
+
+	filter_type: FILTERTYPE_KEYWORDS, //keyword filter
+
+	//these options tell how the toggle menu should appear in the code
+	selector_caption: "Show museums closed on: (keyword filter) ",
+	//array of arrays for the selector. first item is a caption, second is either a value to search for, OR a function.
+	//the function will pass two variables. the first (t, below) is the formatted text to search for. the second (d, below) is the full data item.
+	//if the function returns true, it is marked as "found." if "false" then as "lacks."
+	selector_options: [
+		["All dates", false], //returning 'false' removes all filtering
+		["Sunday", "sunday"],
+		["Monday", "monday"],
+		["Tuesday", "tuesday"],
+		["Wednesday", "wednesday"],
+		["Thursday", "thursday"],
+		["Friday", "friday"],
+		["Saturday", "saturday"],
+	],
+	selector_selected: 0, //default option on list
+	selector_id: "options", //id of the HTML object you want to create the keyword filter select inside of
+
+	delimiter: " ", //character that splits fields up
+
+	filter_field: "closing", //the field name in the CSV file that we search for the keywords in
+	
+	filter_target: ".circledata", //the svg selector of your data to have this filtering act upon
+
+	case_insensitive: true, //will convert all text to *lowercase* before comparing
+
+	found_class: "", //the class that is applied to the svg class if the text is found 
+	lacks_class: "data_hidden", //the class that is applied if it is not found 
+
+})
+
+
+//range filters let you see if a NUMERICAL value is within a range of possibilities
+var range_filter = new dataFilter({
+
+	filter_type: FILTERTYPE_RANGE, //range filter
+
+	//these options tell how the toggle menu should appear in the code
+	selector_caption: "Price: ",
+	//array of arrays for the selector. first item is a caption, second is either a value to search for, OR a function.
+	//for range options, he second value is an array of the form [min,max]. if either is false, treats it as < or >. 
+	//so [false,5] means <5, and [20,false] means >20
+	selector_options: [
+		["All prices", false], //returning false removes all filtering
+		["Free", [0,0] ], //note that this is how we search for the value equalling zero (a range of 0,0)
+		["Under $5", [false,5] ], // false,5 = <5
+		["Under $10",[false,10] ], 
+		["Between $5 and $10", [5,10] ], 
+		["Between $10 and $20", [10,20] ],
+		["Over $20", [20,false] ], // 20,false = >20
+		["Between $5 and $10 but not $9", function(v,d) { //just a dumb example of a custom function
+			if(v>5 && v<10 && v!=9) { 
+				return true;
+			} else {
+				return false;
+			}
+		}] 
+	],
+	selector_selected: 0, //default option on list
+	selector_id: "options", //id of the HTML object you want to create the keyword filter select inside of
+
+	filter_field: "adult_price", // //the field name in the CSV file that we look for the value in
+	
+	filter_target: ".circledata", //the svg selector of your data to have this filtering act upon
+
+	found_class: "", //the class that is applied to the svg class if the text is found
+	lacks_class: "data_hidden", //the class that is applied if it is not found 
+
+})
+
+
+//startup (runs after all elements/scripts/etc. on the page have loaded).
+function init() {
+	window.debug = true; //show some information in the console
+	window.debug_verbose = false; //show a LOT of information in the console
+	d3VizObj.load(); //loads all visualization elements
+}
+window.onload = init;
+
+</script>
+</head>
+<body>
+	<div id="map"></div>
+	<div id="texts">
+		<div id="title">New York City Museums</div>
+		<div id="author">by Alex Wellerstein</div>
+		<hr>
+		<div id="options"></div>
+	</div>
+</body>
+</html>
