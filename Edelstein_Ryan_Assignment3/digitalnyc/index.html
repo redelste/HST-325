@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Digital NYC template</title>
+<title>CAR CRASHES</title>
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=10" />
-<link rel="stylesheet" type="text/css" href="style.css"></link>
+<link rel="stylesheet" type="text/css" href="TestStyle.css"></link>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <link href="https://fonts.googleapis.com/css?family=Arimo" rel="stylesheet">
 <script src="https://2019.vizsociety.net/shared/d3/d3.v3.min.js"></script>
 <script src="https://2019.vizsociety.net/shared/d3/topojson.v1.min.js"></script>
@@ -96,6 +97,31 @@ var circles = new dataCircles({
 				;
 			},
 })
+// Add some very simple captions
+// Visualizations will be "stacked", from the "bottom" up, as we add them. 
+// So if we want captions to be UNDER the data, we need to put them first.
+var captions = new textCaptions({
+div: "#captions",
+map: map, //which map object they go on
+
+angle: 0, //rotation angle (degrees) for all captions -- optional
+
+class: "coolStuff", //class name for captions (for styling)
+
+//list of captions to add, and the lat/lon points to put them near	
+captions: [
+	{caption: "MANHATTAN",lat:40.79,lon:-74.07},
+	{caption: "BROOKLYN",lat:40.65,lon:-73.98},
+	{caption: "THE BRONX",lat:40.85,lon:-73.91},
+	{caption: "QUEENS",lat:40.72,lon:-73.87},
+	{caption: "STATEN ISLAND",lat:40.59,lon:-74.19},	
+],
+
+
+
+})
+
+
 
 //this makes it so that if you click on any circle or path, it'll zoom in or out. 
 var zoomer = new mouseZoomer({
@@ -119,8 +145,8 @@ window.onload = init;
 <body>
 	<div id="map"></div>
 	<div id="texts">
-		<div id="title">New York City Car Crashes</div>
-		<div id="author">by Ryan Edelstein</div>
+		<div id="title">NEW YORK CITY CAR CRASHES</div>
+		<div id="author">BY RYAN EDELSTEIN</div>
 		<hr>
 		<div id="options"></div>
 	</div>
