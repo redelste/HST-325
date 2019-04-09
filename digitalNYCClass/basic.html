@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Digital NYC template</title>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=10" />
+<link rel="stylesheet" type="text/css" href="style.css"></link>
+<script src="https://2019.vizsociety.net/shared/d3/d3.v3.min.js"></script>
+<script src="https://2019.vizsociety.net/shared/d3/topojson.v1.min.js"></script>
+<script src="https://2019.vizsociety.net/shared/d3/d3.geo.projection.v0.min.js"></script>
+<script src="https://2019.vizsociety.net/shared/js/jquery-1.10.2.js"></script>
+<script src="https://2019.vizsociety.net/shared/js/shared.js"></script>
+<script src="https://2019.vizsociety.net/d3viz/lib/all.php"></script>
+
+<script type="text/javascript">
+/* Flexible D3.js global data viewer — by Alex Wellerstein, 2015-2019, v2.1 */
+
+/* MAP OPTIONS */
+
+//creates a new D3 JSON map object
+var map = new d3SVGMap({
+	div: "#map", //id of div to put the map in
+	width: 960, //width of the map 
+	height: window.innerHeight, //height of the map 
+	mapfile: "nyc_boroughs.json", //JSON map file
+	projection_name: "mercator", //map projection 
+	projection_rotate: [73.94,-40.7,0], //centers the map 
+	projection_scale: 90000, //zooms the map
+	projection_translate: [960/2,window.innerHeight/2], //centers the map
+	onload: function() { //function that runs when the map is loaded
+		//this designates what the "tooltip" is going to be
+		map.tooltip = d3.select("#texts")
+					.append("div")
+					.attr("id","tooltip")
+					.text("");
+	}
+});
+
+
+/* DATA SPECIFIC OPTIONS -- you need to tailor these to your dataset */
+
+// NOTE! Anytime you see something like d["something here"], this means
+// that you are referencing a column in the CSV file. The script is smart
+// enough so that it knows that if you put d["something here"] you mean,
+// "access the data in the column whose header (first entry) is 'something here'."
+// So to adapt this to another dataset, you must know the column heads, and find
+// the places in the template below to change it to your own column headings.
+
+//Here is where you should put the data files, in csv format.
+//You can use more than one, as an array, just give it a different number (arrays count from 0, 1, 2, etc.)
+
+//the data file constructor — used for lots of things. You can have more than one, just copy and paste and update the index.
+var museumData = new d3Data({
+	csv: "NYCGO_museums_20and_20galleries_001.csv", //path to the csv file
+	latLon: function(d) { //the latLon function tells the map how to parse any latLon data in the file. you don't HAVE to do this here, but it makes it easily accessible to other visualizations. 
+		return [ parseFloat(d["lat"]), parseFloat(d["lon"]) ] //return an array of [lat,lon] -- so indicate which fields those are
+	}
+})
+
+
+/* END DATA-SPECIFIC OPTIONS */
+
+/* START VISUALIZATION OPTIONS */
+
+// Creates a circle visualization. The circles need latitude and longitude positions (which you can define in the datasource, above),
+// but they also will need a radius (which can be data-driven or just set by you). You can also make the color correspond to data.
+// The example below shows both, as well as how to have it automatically make a radius-size menu. If you don't want a menu,
+// just set radius: 10 or something.
+// Circles work best for data that is located in a specific lat/lon position.
+
+var circles = new dataCircles({
+	map: map, //the D3 map object (already defined above)
+
+	data: museumData, //the D3 data object (already defined above)
+
+	//the class name applied to each item of data
+	data_class: "circledata",
+
+	radius: function(d) { return +d["adult_price"]; },
+	
+	//the field whose value changes the color of the circle
+	color_field: "adult_price",
+		
+	//a function that turns the data into a color, in this case, a d3 color function
+	//the function below uses a linear scale that assigns a color between "green" and "red" as the data varies between 0 ("green") and 24 ("red")
+	color_scale: d3.scale.linear().domain([0,24]).range(["green", "red"]), 
+
+	//function that determines the caption that is displayed when the mouse hovers over a datapoint
+	mouseover_caption: 		
+		function(d) {
+			return "<b><big>"+d["name"] + "</big></b><br>"
+					+d["address"]+"<br>"
+					+d["closing"]+"<br>"
+					+ "Rates: "+d["rates"]+"<br>"
+					+ "Specials: "+d["specials"]+"<br>"
+				;
+			},
+})
+
+//this makes it so that if you click on any circle or path, it'll zoom in or out. 
+var zoomer = new mouseZoomer({
+	map: map,
+	zoom_if_clicked: ["circle","path"],
+	zoom_to_centroid: false,
+	zoom_transition_speed: 700,
+})
+
+
+//startup (runs after all elements/scripts/etc. on the page have loaded).
+function init() {
+	window.debug = true; //show some information in the console
+	window.debug_verbose = false; //show a LOT of information in the console
+	d3VizObj.load(); //loads all visualization elements
+}
+window.onload = init;
+
+</script>
+</head>
+<body>
+	<div id="map"></div>
+	<div id="texts">
+		<div id="title">New York City Museums</div>
+		<div id="author">by Alex Wellerstein</div>
+		<hr>
+		<div id="options"></div>
+	</div>
+</body>
+</html>
