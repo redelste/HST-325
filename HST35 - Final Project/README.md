@@ -1,2 +1,3 @@
 # d3js-heatpmap
-https://www.crowdanalytix.com/communityBlog/10-steps-to-create-calendar-view-heatmap-in-d3-js
+
+A heat map data visualizatoin using D3.JS
