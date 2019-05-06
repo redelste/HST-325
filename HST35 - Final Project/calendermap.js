@@ -71,17 +71,16 @@ svg.selectAll(".month")
     .attr("id", function(d,i){ return month[i] })
     .attr("d", monthPath);
 
-d3.csv("data.csv", function (error, csv) {
-
+d3.csv("data1.csv", function (error, csv) {
   csv.forEach(function (d) {
     d.ID = parseInt(d.ID);
   });
 
-  var randNumColMax = d3.max(csv, function (d) { return d.ID; });
+  var idMax = d3.max(csv, function (d) { return d.ID; });
 
   var data = d3.nest()
     .key(function (d) { return d.Date; })
-    .rollup(function (d) { return Math.sqrt(d[0].ID / randNumColMax); })
+    .rollup(function (d) { return Math.sqrt(d[0].ID / idMax); })
     .map(csv);
 
   rect.filter(function (d) { return d in data; })
