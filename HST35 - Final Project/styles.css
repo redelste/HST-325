@@ -1,0 +1,40 @@
+.backgroundColor {
+    background-color: #383498;
+}
+
+.centerText {
+    text-align: center;
+}
+
+.customFont {
+    font-family: 'Prompt', sans-serif;
+    letter-spacing: 10px;
+    color: azure;
+}
+
+p {
+    font-size: 20px;
+    color: azure;
+    font-family: 'Anton', sans-serif;
+    letter-spacing: 3px;
+    font-stretch: extra-expanded;
+}
+a{
+    font-family: 'Prompt', sans-serif;
+    letter-spacing: 10px;
+}
+a:link {
+    color: azure;
+}
+
+a:visited{
+    color:azure;
+}
+
+a:hover {
+    color: #d82129
+}
+
+a:active {
+    color:#db977f
+}

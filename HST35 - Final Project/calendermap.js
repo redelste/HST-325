@@ -10,8 +10,8 @@ var day = d3.time.format("%w"),
   format = d3.time.format("%Y%m%d");
 parseDate = d3.time.format("%Y%m%d").parse;
 
-var color = d3.scale.linear().range(["white", '#002b53'])
-  .domain([0, 1])
+var color = d3.scale.linear().range(["white", '#ea6500'])
+  .domain([-0.2, 1])
 
 var svg = d3.select(".calender-map").selectAll("svg")
   .data(d3.range(2017, 2020))
@@ -85,7 +85,7 @@ d3.csv("data1.csv", function (error, csv) {
 
   rect.filter(function (d) { return d in data; })
     .attr("fill", function (d) { return color(data[d]); })
-    .attr("data-title", function (d) { return "value : " + Math.round(data[d] * 100) });
+    .attr("data-title", function (d) { return "value : " + Math.round(data.d * 100) });
   $("rect").tooltip({ container: 'body', html: true, placement: 'top' });
 });
 
